@@ -37,6 +37,22 @@ SHAPES = {
     'spoke_4': shapes.spokes(num_sides=4, theta_0=np.pi/4),
     'spoke_5': shapes.spokes(num_sides=5, theta_0=np.pi + np.pi/10),
     'spoke_6': shapes.spokes(num_sides=6),
+
+    's13': shapes.polygon(num_sides=30),
+    's14': shapes.polygon(num_sides=30),
+    's15': shapes.polygon(num_sides=30),
+    's16': shapes.polygon(num_sides=30),
+    's17': shapes.polygon(num_sides=30),
+    's18': shapes.polygon(num_sides=30),
+    's19': shapes.polygon(num_sides=30),
+    's20': shapes.polygon(num_sides=30),
+    's21': shapes.polygon(num_sides=30),
+    's22': shapes.polygon(num_sides=30),
+    's23': shapes.polygon(num_sides=30),
+    's24': shapes.polygon(num_sides=30),
+    's25': shapes.polygon(num_sides=30),
+    's26': shapes.polygon(num_sides=30),
+    's27': shapes.polygon(num_sides=30),
 }
 
 
@@ -54,3 +70,22 @@ class ShapeType(enum.IntEnum):
   spoke_4 = 10
   spoke_5 = 11
   spoke_6 = 12
+  #++++++++
+  s13 = 13
+  s14 = 14
+  s15 = 15
+  s16 = 16
+  s17 = 17
+  s18 = 18
+  s19 = 19
+  s20 = 20
+  s21 = 21
+  s22 = 22
+  s23 = 23
+  s24 = 24
+  s25 = 25
+  s26 = 26
+  s27 = 27
+
+
+
