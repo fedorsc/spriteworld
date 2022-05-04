@@ -1,71 +1,52 @@
-# Spriteworld: A Flexible, Configurable Reinforcement Learning Environment
+# Relational Spriteworld: Extension for Semantic Object Interactions
 
 ## Description
 
-Spriteworld is a python-based RL environment that consists of a 2-dimensional
-arena with simple shapes that can be moved freely. This environment was
-developed for the COBRA agent introduced in the paper ["COBRA: Data-Efficient
-Model-Based RL through Unsupervised Object Discovery and Curiosity-Driven
-Exploration" (Watters et al., 2019)](https://arxiv.org/abs/1905.09275). The
-motivation for the environment was to provide as much flexibility for
-procedurally generating multi-object scenes while retaining as simple an
-interface as possible.
+[Spriteworld](https://github.com/deepmind/spriteworld) is a python-based RL environment that consists of a 2-dimensional
+arena with simple shapes that can be moved freely. **Relational Spriteworld**
+is an extension of this environment that introduces
+**semantic object interactions**. For example, objects can block or lock each other, resulting in different behaviours
+on interaction.
 
-Spriteworld sprites come in a variety of shapes and can vary continuously in
-position, size, color, angle, and velocity. The environment has occlusion but no
-physics, so by default sprites pass beneath each other but do not collide or
-interact in any way. Interactions may be introduced through the action space,
-which can update all sprites each timestep. For example, the DiscreteEmbodied
-action space (see `spriteworld/action_spaces.py`) implements a rudimentary form
-of physics in which an agent's body sprite can adhere to and carry sprites
-underneath it.
+For more information and documentation regarding the original environment, please refer
+to [original repository](https://github.com/deepmind/spriteworld#readme) and the paper in which it was
+introduced: ["COBRA: Data-Efficient Model-Based RL through Unsupervised Object Discovery and Curiosity-Driven Exploration" (Watters et al., 2019)](https://arxiv.org/abs/1905.09275)
+.
 
-There are a variety of action spaces, some of which are continuous (like a
-touch-screen) and others of which are discrete (like an embodied agent that
-takes discrete steps).
+## New Mechanics
 
-## Example Tasks
+This extension introduces new object types, semantic object states, interactions, and interaction effects that depend on
+an objects semantic state. All of them can be easily configured, modified or extended.
 
-Below are three of the tasks used in the
-[COBRA paper](https://arxiv.org/abs/1905.09275).
+#### Specifically, the following mechanics are introduced:
 
-Goal-finding task. The agent must bring the target sprites (squares) to the
-center of the arena.
+- **Locks:** special (e.g. red) objects that prevent other objects from moving
+- **Clicking interaction:** clicking on an object triggers a different effect than dragging it.
+- **Shape change effect:** objects can change shape (e.g. when clicked)
+- **Semantic object states** (based on the relation to other objects):
+  - **locked:** object cannot move if a lock with the same shape is present
+  - **blocked:** object cannot change shape if touching any other object
 
-![goal_finding_video](./gifs/goal_finding_video.gif)
+All combined, objects can be moved by dragging (if they are not locked) and change shape by clicking (if they are not
+blocked).
 
-Clustering task. The agent must arrange the sprites into clusters according to
-their color.
+![environment](./gifs/environment-1.png)
 
-![clustering_video](./gifs/clustering_video.gif)
-
-Sorting task. The agent must sort the sprites into goal locations according
-to their color (each color is associated with a different goal location).
-
-![sorting_video](./gifs/sorting_video.gif)
 
 ## Installation
 
-Spriteworld can be installed using `pip`:
+Relational Spriteworld can be installed through Github:
 
 ```bash
-pip install spriteworld
-```
-
-Or through Github:
-
-```bash
-pip install git+https://github.com/deepmind/spriteworld.git
+pip install git+https://github.com/thomaschn/spriteworld
 ```
 
 or alternatively by checking out a local copy of our repository and running:
 
 ```bash
-git clone https://github.com/deepmind/spriteworld.git
+git clone https://github.com/thomaschn/spriteworld
 pip install spriteworld/
 ```
-
-This last option additionally downloads tests, the demo UI and an example run loop.
 
 ## Getting Started
 
@@ -76,63 +57,10 @@ and `dm_env`.
 
 #### Running The Demo
 
-Once installed, you may familiarize yourself with Spriteworld through
-`run_demo.py`:
+Once installed, the example configuration containing all new mechanics
+`configs/relational/locking_and_blocking.py` can be run using `run_demo.py`:
 
 ```bash
-python /path/to/local/spriteworld/run_demo.py
+python /path/to/local/spriteworld/run_demo.py --config spriteworld.configs.relational.locking_and_blocking
 ```
 
-This will run a cluster-by-color task with a drag-and-drop action space. There
-are a number of tasks specified in the `spriteworld/configs` directory, each of
-which can be run with the demo by modifying the `--config` flag. Note that some
-tasks (namely `spriteworld.configs.examples.goal_finding_embodied`) use an
-embodied agent instead of the drag-and-drop action space.
-
-#### Creating Your Own Task
-
-In `spriteworld/tasks.py` are three tasks: `FindGoalPosition`, `Clustering`, and
-`MetaAggregated`. These can be configured and combined in numerous ways to
-create a wide variety of tasks, including all of those used in the
-[COBRA paper](https://arxiv.org/abs/1905.09275). In particular, see
-`spriteworld/configs/cobra/sorting.py` for a non-trivial combination of
-goal-finding tasks.
-
-You may create new tasks be re-using these building blocks, or creating entirely
-new types of tasks (just be sure to inherit from
-`spriteworld/tasks.AbstractTask`).
-
-#### Running An Agent
-
-See `example_run_loop.py` for an example of how to run a random agent on a
-Spriteworld task. See `spriteworld/gym_wrapper.py` if you prefer the OpenAI Gym
-environment interface.
-
-## Additional Use-Cases
-
-Spriteworld can be used for purposes other than reinforcement learning. For
-example, it was used to generate the image datasets with controlled factor
-distributions presented in the paper ["Spatial Broadcast Decoder: A Simple
-Architecture for Learning Disentangled Representations in VAEs" (Watters et al.,
-2019)](https://arxiv.org/abs/1901.07017). It can also be easily extended to
-generate datasets of objects interacting with simple physical forces (e.g.
-spring, gravity, etc.), which are useful for research in unsupervised learning
-of visual dynamics.
-
-## Reference
-
-If you use this library in your work, please cite it as follows:
-
-```
-@misc{spriteworld19,
-author = {Nicholas Watters and Loic Matthey and Sebastian Borgeaud and Rishabh Kabra and Alexander Lerchner},
-title = {Spriteworld: A Flexible, Configurable Reinforcement Learning Environment},
-howpublished = {https://github.com/deepmind/spriteworld/},
-url = {https://github.com/deepmind/spriteworld/},
-year = "2019",
-}
-```
-
-## Disclaimers
-
-This is not an officially supported Google product.

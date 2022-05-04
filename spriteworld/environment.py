@@ -1,4 +1,5 @@
 # Copyright 2019 DeepMind Technologies Limited.
+# Modified by Thomas Schnürer (thomas.schnuerer@tu-ilmenau.de)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -91,21 +92,29 @@ class Environment(dm_env.Environment):
       return self.reset()
 
     self._step_count += 1
-    reward = self._action_space.step(
-        action, self._sprites, keep_in_frame=self._keep_in_frame)
+    result = self._action_space.step(
+      action, self._sprites, keep_in_frame=self._keep_in_frame)
 
     # Update sprite positions from their velocities
     for sprite in self._sprites:
       sprite.update_position(keep_in_frame=self._keep_in_frame)
 
-    reward += self._task.reward(self._sprites)
+    # compatibility for action_spaces that passes additional (debug) information instead of just the reward
+    if isinstance(result, dict):  # result is a dict containing reward and more
+      assert 'reward' in result.keys(), 'result of environment step must at least contain the steps reward'
+      result['reward'] += self._task.reward(self._sprites)
+    elif isinstance(result, float):  # result is just reward
+      result += self._task.reward(self._sprites)
+    else:
+      raise NotImplementedError
+
     observation = self.observation()
 
     if self.should_terminate():
       self._reset_next_step = True
-      return dm_env.termination(reward=reward, observation=observation)
+      return dm_env.termination(reward=result, observation=observation)
     else:
-      return dm_env.transition(reward=reward, observation=observation)
+      return dm_env.transition(reward=result, observation=observation)
 
   def sample_contained_position(self):
     """Sample a random position contained in a sprite.

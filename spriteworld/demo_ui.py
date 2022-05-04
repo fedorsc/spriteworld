@@ -1,4 +1,5 @@
 # Copyright 2019 DeepMind Technologies Limited.
+# Modified by Thomas Schnürer (thomas.schnuerer@tu-ilmenau.de)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,10 +26,14 @@ from __future__ import print_function
 
 import logging as log
 import sys
-from absl import logging
-from matplotlib import gridspec
+
+import matplotlib as mpl
 import matplotlib.pylab as plt
 import numpy as np
+from absl import logging
+from matplotlib import gridspec
+
+mpl.use('TkAgg')
 
 from spriteworld import action_spaces
 from spriteworld import environment
@@ -78,7 +83,8 @@ class MatplotlibUI(object):
     for key in ('keymap.fullscreen', 'keymap.home', 'keymap.back',
                 'keymap.forward', 'keymap.pan', 'keymap.zoom', 'keymap.save',
                 'keymap.quit', 'keymap.grid', 'keymap.yscale', 'keymap.xscale',
-                'keymap.all_axes'):
+            # 'keymap.all_axes'
+                ):
       plt.rcParams[key] = ''
 
     # Disable logging of some matplotlib events
@@ -299,7 +305,7 @@ def setup_run_ui(env_config, render_size, task_hsv_colors, anti_aliasing):
   """Start a Demo UI given an env_config."""
   if isinstance(env_config['action_space'], action_spaces.SelectMove):
     # DragAndDrop is a bit easier to demo than the SelectMove action space
-    env_config['action_space'] = action_spaces.DragAndDrop(scale=0.5)
+    # env_config['action_space'] = action_spaces.DragAndDrop(scale=0.5)
     agent = HumanDragAndDropAgent(env_config['action_space'])
   elif isinstance(env_config['action_space'], action_spaces.Embodied):
     agent = HumanEmbodiedAgent(env_config['action_space'])
