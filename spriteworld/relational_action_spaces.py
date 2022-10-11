@@ -79,6 +79,58 @@ def cycle_sprite_shape(sprite, scene, motion, action_space):
 """
 
 
+class WeightedDnD(DragAndDrop):
+    """ Just like DrangAndDrop, but taking the weight of an object into account """
+
+    def __init__(
+            self,
+            weight_multiplier=1.0,
+            scale=1.0,
+            motion_cost=0.0,
+            noise_scale=None
+    ):
+        """ Constructor
+
+        Args:
+            weight_multiplier: Multiplier of how much the weight will scale down the motion.
+                motion = motion * weight_multiplier / weight
+            scale: Multiplier by which the motion is scaled down regardless of the weight. Should be in [0.0,1.0].
+            motion_cost: Factor by which motion incurs cost.
+            noise_scale: Optional stddev of the noise. If scalar, applied to all
+                action space components. If vector, must have same shape as action.
+        """
+        super(WeightedDnD, self).__init__(scale, motion_cost, noise_scale)
+        self._weight_multiplier = weight_multiplier
+
+    def step(self, action, sprites, keep_in_frame):
+        """Take an action and move the sprites.
+
+        Args:
+          action: Numpy array of shape (4,) in [0, 1]. First two components are the
+            position selection, second two are the motion selection.
+          sprites: Iterable of sprite.Sprite() instances. If a sprite is moved by
+            the action, its position is updated.
+          keep_in_frame: Bool. Whether to force sprites to stay in the frame by
+            clipping their centers of mass to be in [0, 1].
+
+        Returns:
+          Scalar cost of taking this action.
+        """
+        noised_action = self.apply_noise_to_action(action)
+        position = noised_action[:2]
+        motion = self.get_motion(noised_action)
+        clicked_sprite = self.get_sprite_from_position(position, sprites)
+        if clicked_sprite is not None:
+            assert hasattr(clicked_sprite, 'weight'), "This action space does not work with regular Sprites." \
+                                                      "Please ensure that Sprites have a 'weight' attribute."
+            weighted_motion = motion / (1 + (self._weight_multiplier * clicked_sprite.weight))
+            clicked_sprite.move(weighted_motion, keep_in_frame=keep_in_frame)
+            motion = weighted_motion
+
+        return -self._motion_cost * np.linalg.norm(motion)
+
+
+
 class MovingAndClicking(DragAndDrop):
     """ This action space takes different actions when an object is clicked or moved (dragged)
 
