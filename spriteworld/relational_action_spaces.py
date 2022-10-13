@@ -101,6 +101,8 @@ class MovingAndClicking(DragAndDrop):
             pass_info=True,
             scale=1.0,
             motion_cost=0.0,
+            click_cost=0.0,
+            step_cost=0.0,
             noise_scale=None
     ):
         """ Constructor
@@ -126,6 +128,8 @@ class MovingAndClicking(DragAndDrop):
         self.move_action = move_action
         self.click_action = click_action
         self.pass_info = pass_info
+        self.click_cost = click_cost
+        self.step_cost = step_cost
 
     def step(self, action, sprites, keep_in_frame):
         """ Take an action and either click or move a sprite.
@@ -150,7 +154,7 @@ class MovingAndClicking(DragAndDrop):
         sprite_pos_2 = self.get_sprite_from_position(position_2, sprites)
 
         if sprite_pos_1 is None:
-            reward = 0
+            reward = 0.
             info = {'selected': -1}
 
         else:
@@ -160,16 +164,18 @@ class MovingAndClicking(DragAndDrop):
                 logging.info('click action')
                 info['click'] = True
                 motion, inf = self.click_action(sprite_pos_1, sprites, motion, self)
+                reward = -self.click_cost
 
             # action is moving an object
             else:
                 logging.info('drag action')
                 info['click'] = False
                 motion, inf = self.move_action(sprite_pos_1, sprites, motion, self)
+                reward = -self._motion_cost * np.linalg.norm(motion)
 
             sprite_pos_1.move(motion, keep_in_frame=keep_in_frame)
             info = {**info, **inf}
-            reward = -self._motion_cost * np.linalg.norm(motion)
+            reward -= self.step_cost
 
         if self.pass_info:
             return {'reward': reward, 'info': info}
