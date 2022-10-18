@@ -16,13 +16,28 @@
 
 import numpy as np
 from absl import logging
-
-from spriteworld.action_spaces import DragAndDrop
+from spriteworld.action_spaces import DragAndDrop, specs
 
 """
 ============== Possible Object Actions ============== 
 """
 
+class ConditionedMechanic:
+    def __int__(self, mechanic, condition=None):
+        self.mechanic = mechanic
+        self.condition = condition
+
+    def __call__(self, sprite, scene, param, action_space):
+        if self.condition(sprite, scene, action_space):
+            self.mechanic(sprite, scene, )
+
+
+def move_sprite_to_position(sprite, scene, motion, action_space):
+    motion = sprite.position - goal_pos
+    move_sprite(sprite, scene, motion, None)
+
+def move_sprite(sprite, scene, motion, action_space):
+    sprite.move(motion, keep_in_frame=True)
 
 def move_if_unlocked(sprite, scene, motion, action_space):
     if is_lock(sprite):
@@ -77,6 +92,157 @@ def cycle_sprite_shape(sprite, scene, motion, action_space):
 """
 ============== Action Space ============== 
 """
+
+
+def get_sprite_from_position(position, sprites):
+    for sprite in sprites[::-1]:
+        if sprite.contains_point(position):
+            return sprite
+    return None
+
+
+class SymbolicInteraction(object):
+    def __init__(
+            self,
+            shapes,
+            object_size,
+            interactions_available,
+            interactions_costs,
+            invalid_action_cost=0.0,
+            step_cost=0.0
+    ):
+        self.shapes = shapes
+        self.object_size = object_size
+        self.interactions_available = interactions_available
+        self.interactions_costs = interactions_costs
+        self.invalid_action_cost = invalid_action_cost
+        self.step_cost = step_cost
+        # self._action_spec = specs.BoundedArray(
+        #     shape=(4,), dtype=np.float32, minimum=0.0, maximum=1.0)
+
+    def is_valid_action(self, action):
+        return len(action) >= 2 and action[0] >= 0 and action[1] >= 0
+
+    def step(self, action, sprites, keep_in_frame):
+        """ Take an action and either click or move a sprite.
+
+        Args:
+          action: tuple of (int, int, params (optional) )
+            action[0]: index of selected sprite
+            action[1]: index of action to perform
+            action[2]: optional parameters for action
+          sprites: Iterable of sprite.Sprite() instances. If a sprite is moved by
+            the action, its position is updated.
+          keep_in_frame: Bool. Whether to force sprites to stay in the frame by
+            clipping their centers of mass to be in [0, 1].
+
+        Returns:
+          Scalar cost of taking this action (if pass_info is set to False) or
+          Dict with reward (cost) and info (if pass_info is set to True)
+        """
+
+        reward = -self.step_cost
+
+        if not self.is_valid_action(action):
+            reward += -self.invalid_action_cost
+            return reward
+
+        sprite_idx = action[0]
+        action_idx = action[1]
+        params = action[2] if len(action) > 2 else []
+
+        if sprite_idx < len(sprites):
+            sprite = sprites[sprite_idx]
+            if action_idx < len(self.interactions_available) and self.interactions_available[action_idx] is not None:
+                motion, info = self.interactions_available[action_idx](sprite, sprites, params, self)
+                sprite.move(motion, keep_in_frame=keep_in_frame)
+                reward -= self.interactions_costs[action_idx]
+            else:
+                reward -= self.invalid_action_cost
+        else:
+            reward -= self.invalid_action_cost
+
+        return reward
+
+
+class TwoClick(SymbolicInteraction):
+
+    def __init__(
+            self,
+            shapes,
+            object_size,
+            move_action=move_if_unlocked,
+            click_action=cycle_sprite_shape,
+            scale=1.0,
+            motion_cost=0.0,
+            click_cost=0.0,
+            step_cost=0.0,
+            noise_scale=None,
+            **kwargs
+    ):
+
+        super(TwoClick, self).__init__(
+            shapes,
+            object_size,
+            interactions_available=[
+                move_action,
+                click_action
+            ],
+            interactions_costs=[
+                motion_cost,
+                click_cost,
+            ],
+            step_cost=step_cost,
+            **kwargs
+        )
+        self._scale = scale
+        self._action_spec = specs.BoundedArray(
+            shape=(4,), dtype=np.float32, minimum=0.0, maximum=1.0)
+
+    def get_motion(self, action):
+        pos = action[:2]
+        target = action[2:]
+        delta_pos = (target - pos) * self._scale
+        return delta_pos
+
+    def action_spec(self):
+        return self._action_spec
+
+    def step(self, action, sprites, keep_in_frame):
+        """ Take an action and either click or move a sprite.
+
+        Args:
+          action: Numpy array of shape (4,) in [0, 1]. First two components are the
+            position selection, second two are the motion selection.
+          sprites: Iterable of sprite.Sprite() instances. If a sprite is moved by
+            the action, its position is updated.
+          keep_in_frame: Bool. Whether to force sprites to stay in the frame by
+            clipping their centers of mass to be in [0, 1].
+
+        Returns:
+          Scalar cost of taking this action (if pass_info is set to False) or
+          Dict with reward (cost) and info (if pass_info is set to True)
+        """
+        position_1 = action[:2]
+        motion = self.get_motion(action)
+        position_2 = position_1 + motion
+        sprite_pos_1 = get_sprite_from_position(position_1, sprites)
+        sprite_pos_2 = get_sprite_from_position(position_2, sprites)
+
+        if sprite_pos_1 is None:
+            sprite_idx = -1
+
+        else:
+            sprite_idx = sprites.index(sprite_pos_1)
+            if sprite_pos_2 is not None and sprite_pos_2 == sprite_pos_1:
+                # action is clicking on an object
+                act_idx = 1
+            else:
+                # action is moving an object
+                act_idx = 0
+
+        sym_act = [sprite_idx, act_idx, motion]
+        return super(TwoClick, self).step(sym_act, sprites, keep_in_frame)
 
 
 class MovingAndClicking(DragAndDrop):
@@ -153,8 +319,10 @@ class MovingAndClicking(DragAndDrop):
         sprite_pos_1 = self.get_sprite_from_position(position_1, sprites)
         sprite_pos_2 = self.get_sprite_from_position(position_2, sprites)
 
+        reward = -self.step_cost
+
         if sprite_pos_1 is None:
-            reward = 0.
+            reward += 0.
             info = {'selected': -1}
 
         else:
@@ -164,18 +332,17 @@ class MovingAndClicking(DragAndDrop):
                 logging.info('click action')
                 info['click'] = True
                 motion, inf = self.click_action(sprite_pos_1, sprites, motion, self)
-                reward = -self.click_cost
+                reward += -self.click_cost
 
             # action is moving an object
             else:
                 logging.info('drag action')
                 info['click'] = False
                 motion, inf = self.move_action(sprite_pos_1, sprites, motion, self)
-                reward = -self._motion_cost * np.linalg.norm(motion)
+                reward += -self._motion_cost * np.linalg.norm(motion)
 
             sprite_pos_1.move(motion, keep_in_frame=keep_in_frame)
             info = {**info, **inf}
-            reward -= self.step_cost
 
         if self.pass_info:
             return {'reward': reward, 'info': info}
