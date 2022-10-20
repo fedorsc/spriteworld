@@ -95,7 +95,7 @@ class Sprite(object):
         self._color = (c0, c1, c2)
         self._velocity = (x_vel, y_vel)
         self._weight = weight
-        print("weight = %s" % weight)
+        # print("weight = %s" % weight)
 
         self._reset_centered_path()
 
