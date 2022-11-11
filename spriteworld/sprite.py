@@ -66,7 +66,7 @@ class Sprite(object):
                  c2=0,
                  x_vel=0.0,
                  y_vel=0.0,
-                 weight=0.0):
+                 weight=1.0):
         """Construct sprite.
 
     This class is agnostic to the color scheme, namely (c1, c2, c3) could be in

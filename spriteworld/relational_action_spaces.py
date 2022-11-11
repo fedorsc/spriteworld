@@ -84,7 +84,6 @@ class WeightedDnD(DragAndDrop):
 
     def __init__(
             self,
-            weight_multiplier=1.0,
             scale=1.0,
             motion_cost=0.0,
             noise_scale=None
@@ -92,15 +91,12 @@ class WeightedDnD(DragAndDrop):
         """ Constructor
 
         Args:
-            weight_multiplier: Multiplier of how much the weight will scale down the motion.
-                motion = motion * weight_multiplier / weight
             scale: Multiplier by which the motion is scaled down regardless of the weight. Should be in [0.0,1.0].
             motion_cost: Factor by which motion incurs cost.
             noise_scale: Optional stddev of the noise. If scalar, applied to all
                 action space components. If vector, must have same shape as action.
         """
         super(WeightedDnD, self).__init__(scale, motion_cost, noise_scale)
-        self._weight_multiplier = weight_multiplier
 
     def step(self, action, sprites, keep_in_frame):
         """Take an action and move the sprites.
@@ -123,7 +119,8 @@ class WeightedDnD(DragAndDrop):
         if clicked_sprite is not None:
             assert hasattr(clicked_sprite, 'weight'), "This action space does not work with regular Sprites." \
                                                       "Please ensure that Sprites have a 'weight' attribute."
-            weighted_motion = motion / (1 + (self._weight_multiplier * clicked_sprite.weight))
+            assert clicked_sprite.weight != 0, "Weight of Sprite cannot be zero."
+            weighted_motion = motion / clicked_sprite.weight
             clicked_sprite.move(weighted_motion, keep_in_frame=keep_in_frame)
             motion = weighted_motion
 
