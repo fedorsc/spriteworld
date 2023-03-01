@@ -98,10 +98,18 @@ class SelectMove(object):
     position = noised_action[:2]
     motion = self.get_motion(noised_action)
     clicked_sprite = self.get_sprite_from_position(position, sprites)
+    collision = [False] * len(sprites)
     if clicked_sprite is not None:
-      clicked_sprite.move(motion, keep_in_frame=keep_in_frame)
+      collision[sprites.index(clicked_sprite)] = clicked_sprite.move(motion, keep_in_frame=keep_in_frame)
 
-    return -self._motion_cost * np.linalg.norm(motion)
+    info = {
+        "collision": collision,
+    }
+    result = {
+        "reward": -self._motion_cost * np.linalg.norm(motion),
+        "info": info,
+    }
+    return result
 
   def sample(self):
     """Sample an action uniformly randomly."""
@@ -203,15 +211,24 @@ class Embodied(object):
     motion = self.action_to_motion[action[1]]
 
     # Move carried sprite if necessary
+    collision = [False] * len(sprites)
     if carry:
       carried_sprite = self.get_carried_sprite(sprites)
       if carried_sprite is not None:
-        carried_sprite.move(motion, keep_in_frame=keep_in_frame)
+        collision[sprites.index(carried_sprite)] = carried_sprite.move(motion, keep_in_frame=keep_in_frame)
 
     # Move agent body
     self.get_body_sprite(sprites).move(motion, keep_in_frame=keep_in_frame)
 
-    return -self._motion_cost * self._step_size
+    info = {
+        "collision": collision,
+    }
+    result = {
+        "reward": -self._motion_cost * self._step_size,
+        "info": info,
+    }
+    return result
+
 
   def sample(self):
     """Sample an action uniformly randomly."""

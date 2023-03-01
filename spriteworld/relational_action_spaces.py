@@ -116,15 +116,23 @@ class WeightedDnD(DragAndDrop):
         position = noised_action[:2]
         motion = self.get_motion(noised_action)
         clicked_sprite = self.get_sprite_from_position(position, sprites)
+        collision = [False] * len(sprites)
         if clicked_sprite is not None:
             assert hasattr(clicked_sprite, 'weight'), "This action space does not work with regular Sprites." \
                                                       "Please ensure that Sprites have a 'weight' attribute."
             assert clicked_sprite.weight != 0, "Weight of Sprite cannot be zero."
             weighted_motion = motion / clicked_sprite.weight
-            clicked_sprite.move(weighted_motion, keep_in_frame=keep_in_frame)
+            collision[sprites.index(clicked_sprite)] = clicked_sprite.move(weighted_motion, keep_in_frame=keep_in_frame)
             motion = weighted_motion
 
-        return -self._motion_cost * np.linalg.norm(motion)
+        info = {
+            "collision": collision,
+        }
+        result = {
+            "reward": -self._motion_cost * np.linalg.norm(motion),
+            "info": info,
+        }
+        return result
 
 
 
@@ -200,7 +208,7 @@ class MovingAndClicking(DragAndDrop):
 
         if sprite_pos_1 is None:
             reward = 0
-            info = {'selected': -1}
+            info = {'selected': -1, "collision": [False] * len(sprites)}
 
         else:
             info = {'selected': sprites.index(sprite_pos_1)}
@@ -216,8 +224,9 @@ class MovingAndClicking(DragAndDrop):
                 info['click'] = False
                 motion, inf = self.move_action(sprite_pos_1, sprites, motion, self)
 
-            sprite_pos_1.move(motion, keep_in_frame=keep_in_frame)
-            info = {**info, **inf}
+            collision = [False] * len(sprites)
+            collision[sprites.index(sprite_pos_1)] = sprite_pos_1.move(motion, keep_in_frame=keep_in_frame)
+            info = {**info, **inf, "collision": collision}
             reward = -self._motion_cost * np.linalg.norm(motion)
 
         if self.pass_info:
