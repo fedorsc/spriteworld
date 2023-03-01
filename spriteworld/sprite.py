@@ -109,8 +109,12 @@ class Sprite(object):
     def move(self, motion, keep_in_frame=False):
         """Move the sprite, optionally keeping its centerpoint within the frame."""
         self._position += motion
+        collision = False
         if keep_in_frame:
-            self._position = np.clip(self._position, 0.0, 1.0)
+            position_clipped = np.clip(self._position, 0.0, 1.0)
+            collision = (position_clipped != self._position).any()
+            self._position = position_clipped
+        return collision
 
     def update_position(self, keep_in_frame=False):
         """Update position based on velocity."""
