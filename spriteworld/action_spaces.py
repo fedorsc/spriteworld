@@ -211,8 +211,7 @@ class Embodied(object):
     # Move agent body
     self.get_body_sprite(sprites).move(motion, keep_in_frame=keep_in_frame)
 
-    return -self._motion_cost * self._step_size,
-
+    return -self._motion_cost * self._step_size
 
   def sample(self):
     """Sample an action uniformly randomly."""
